@@ -1,0 +1,146 @@
+# NestJS RAG MVP (Chroma + LangChain.js)
+
+사내 문서 기반 사업기획서 작성 MVP용 RAG 인프라입니다.
+
+## 실행
+
+```bash
+docker-compose up -d
+npm install
+npm run start:dev
+```
+
+## 환경변수
+
+`.env.example` 참고:
+
+- `OPENAI_API_KEY`
+- `CHROMA_URL` (기본 `http://localhost:8000`)
+- `COLLECTION_NAME` (기본 `mvp_docs`)
+- `PORT` (기본 `3000`)
+
+## MVP 제한사항 (중요)
+
+- 이미지/OCR 미지원
+- 스캔 PDF(이미지 기반) 또는 텍스트 추출 불가 문서는 인덱싱 실패 처리
+- 표/도형/이미지에서 텍스트가 추출되지 않으면 무시(레이아웃 보존 없음)
+- 인덱싱 실패 시 파일별 `status=failed`와 `reason` 반환, 다른 파일은 계속 처리(부분 성공 허용)
+
+## API
+
+### 1) 텍스트 직접 인덱싱
+
+`POST /ingest/text`
+
+```bash
+curl -X POST http://localhost:3000/ingest/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text":"내부 기획 문서 초안: 목표는 RAG 기반 근거 응답 제공",
+    "metadata":{"project":"mvp","docType":"memo"}
+  }'
+```
+
+### 2) 파일 업로드 인덱싱
+
+`POST /ingest/files` (multipart/form-data, 다중 파일)
+
+```bash
+curl -X POST http://localhost:3000/ingest/files \
+  -F "project=internal-mvp" \
+  -F "docType=planning" \
+  -F "files=@data/sample_docs/sample_text.pdf" \
+  -F "files=@data/sample_docs/sample_plan.docx" \
+  -F "files=@data/sample_docs/sample_pitch.pptx"
+```
+
+### 3) 질의
+
+`POST /query`
+
+```bash
+curl -X POST http://localhost:3000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question":"이 MVP의 핵심 범위를 요약해줘",
+    "topK": 6,
+    "filters": {"project": "internal-mvp"}
+  }'
+```
+
+응답에는 `answer`, `citations`, `retrieved`가 포함됩니다. `citations`는 반드시 retrieved excerpt 기반입니다.
+
+### 4) 헬스체크
+
+`GET /health` (Chroma 연결 확인 포함)
+
+```bash
+curl http://localhost:3000/health
+```
+
+## 샘플 문서
+
+- `data/sample_docs/sample_text.pdf` (텍스트 PDF)
+- `data/sample_docs/sample_plan.docx`
+- `data/sample_docs/sample_pitch.pptx`
+- `data/sample_docs/sample_notes.txt`
+- `data/sample_docs/sample_overview.md`
+
+## 프로젝트 파일 트리
+
+```text
+.
+├── docker-compose.yml
+├── .env.example
+├── data
+│   ├── sample_docs
+│   │   ├── sample_text.pdf
+│   │   ├── sample_plan.docx
+│   │   ├── sample_pitch.pptx
+│   │   ├── sample_notes.txt
+│   │   └── sample_overview.md
+│   └── uploads
+└── src
+    ├── app.controller.ts
+    ├── app.module.ts
+    ├── main.ts
+    ├── common
+    │   └── filters
+    │       └── http-exception.filter.ts
+    └── rag
+        ├── rag.module.ts
+        ├── shared
+        │   └── constants.ts
+        ├── chroma
+        │   ├── chroma.module.ts
+        │   └── chroma.service.ts
+        ├── ingest
+        │   ├── ingest.controller.ts
+        │   ├── ingest.module.ts
+        │   ├── dto
+        │   │   ├── ingest-files.dto.ts
+        │   │   └── ingest-text.dto.ts
+        │   └── services
+        │       ├── chunking.service.ts
+        │       ├── ingest.service.ts
+        │       └── text-extractor.service.ts
+        └── query
+            ├── query.controller.ts
+            ├── query.module.ts
+            ├── query.service.ts
+            └── dto
+                └── query.dto.ts
+```
+
+## Troubleshooting
+
+- 텍스트 추출 실패(스캔 PDF 등)
+  - `/ingest/files` 결과에서 해당 파일은 `status=failed`
+  - `reason`: `Text extraction failed or empty content. Scanned/image-based files are not supported in MVP.`
+- 포트 충돌 (`8000` 또는 `3000`)
+  - 사용 중 프로세스를 종료하거나 포트를 변경
+- `OPENAI_API_KEY` 누락
+  - 임베딩/질의 단계에서 `OPENAI_API_KEY is missing` 오류 발생
+- Chroma 연결 실패
+  - `docker-compose ps`로 컨테이너 상태 확인
+  - `curl http://localhost:8000/api/v1/heartbeat` 확인

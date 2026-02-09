@@ -1,0 +1,22 @@
+services:
+  chroma:
+    image: chromadb/chroma:0.5.5
+    container_name: rag-chroma
+    ports:
+      - '8000:8000'
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat').read()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  chroma_data:
+    name: rag_chroma_data
