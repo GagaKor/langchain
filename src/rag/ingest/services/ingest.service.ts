@@ -1,14 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ChromaService } from '../../chroma/chroma.service';
-import {
-  EXTRACTION_FAILURE_MESSAGE,
-  SUPPORTED_EXTENSIONS,
-} from '../../shared/constants';
+import { EXTRACTION_FAILURE_MESSAGE, SUPPORTED_EXTENSIONS } from '../../shared/constants';
 import { ChunkingService } from './chunking.service';
 import { TextExtractorService } from './text-extractor.service';
 
@@ -100,10 +94,7 @@ export class IngestService {
       project: input.project ?? null,
     });
 
-    const documents = await this.chunkingService.chunkSegments(
-      segments,
-      baseMetadata,
-    );
+    const documents = await this.chunkingService.chunkSegments(segments, baseMetadata);
 
     const ingested = await this.chromaService.addDocuments(documents);
 

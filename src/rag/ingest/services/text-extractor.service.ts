@@ -94,9 +94,7 @@ export class TextExtractorService {
       }
 
       const xml = await slideEntry.async('string');
-      const textRuns = Array.from(xml.matchAll(/<a:t>(.*?)<\/a:t>/g), (m) =>
-        this.decodeXml(m[1]),
-      )
+      const textRuns = Array.from(xml.matchAll(/<a:t>(.*?)<\/a:t>/g), (m) => this.decodeXml(m[1]))
         .map((line) => line.trim())
         .filter(Boolean);
 

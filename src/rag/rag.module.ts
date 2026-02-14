@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ChromaModule } from './chroma/chroma.module';
+import { HealthModule } from './health/health.module';
 import { IngestModule } from './ingest/ingest.module';
+import { LlmModule } from './llm/llm.module';
 import { QueryModule } from './query/query.module';
+import { VectorStoreModule } from './vector-store/vector-store.module';
 
 @Module({
-  imports: [ChromaModule, IngestModule, QueryModule],
-  exports: [ChromaModule],
+  imports: [VectorStoreModule, LlmModule, IngestModule, QueryModule, HealthModule],
 })
 export class RagModule {}

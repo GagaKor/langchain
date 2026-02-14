@@ -9,7 +9,6 @@ export class ChunkingService {
   private readonly splitter = new RecursiveCharacterTextSplitter({
     chunkSize: CHUNK_SIZE,
     chunkOverlap: CHUNK_OVERLAP,
-    addStartIndex: true,
   });
 
   async chunkSegments(
@@ -19,15 +18,16 @@ export class ChunkingService {
     const output: Document[] = [];
 
     for (const segment of segments) {
-      const baseMetadata = { ...metadata, pageOrSlide: segment.pageOrSlide };
-      const chunked = await this.splitter.createDocuments(
-        [segment.text],
-        [baseMetadata],
-      );
+      const baseMetadata: Record<string, unknown> = {
+        ...metadata,
+        pageOrSlide: segment.pageOrSlide,
+      };
+      const chunked = await this.splitter.createDocuments([segment.text], [baseMetadata]);
 
+      let nextStartOffset = 0;
       chunked.forEach((doc, index) => {
-        const startOffset = this.getStartIndex(doc.metadata.start_index);
-        const chunkId = `${String(baseMetadata.docId)}-${segment.pageOrSlide}-${index + 1}`;
+        const startOffset = nextStartOffset;
+        const chunkId = `${this.toMetadataString(baseMetadata.docId)}-${segment.pageOrSlide}-${index + 1}`;
 
         doc.metadata = {
           ...doc.metadata,
@@ -35,6 +35,8 @@ export class ChunkingService {
           startOffset,
           endOffset: startOffset + doc.pageContent.length,
         };
+
+        nextStartOffset = Math.max(0, startOffset + doc.pageContent.length - CHUNK_OVERLAP);
       });
 
       output.push(...chunked);
@@ -43,7 +45,7 @@ export class ChunkingService {
     return output;
   }
 
-  private getStartIndex(value: unknown): number {
-    return typeof value === 'number' && value >= 0 ? value : 0;
+  private toMetadataString(value: unknown): string {
+    return typeof value === 'string' && value.length > 0 ? value : 'unknown-doc';
   }
 }

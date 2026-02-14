@@ -10,6 +10,7 @@ import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'node:fs';
 import { extname } from 'node:path';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { IngestedFileResult, IngestService } from './services/ingest.service';
 import { IngestTextDto } from './dto/ingest-text.dto';
 import { IngestFilesDto } from './dto/ingest-files.dto';
@@ -20,6 +21,7 @@ interface UploadedFile {
   path: string;
 }
 
+@ApiTags('ingest')
 @Controller('ingest')
 export class IngestController {
   constructor(
@@ -40,6 +42,21 @@ export class IngestController {
     };
   }
 
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+        project: { type: 'string' },
+        docType: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
   @Post('files')
   @UseInterceptors(
     FilesInterceptor('files', 20, {
@@ -60,10 +77,7 @@ export class IngestController {
       }),
     }),
   )
-  async ingestFiles(
-    @UploadedFiles() files: UploadedFile[],
-    @Body() body: IngestFilesDto,
-  ) {
+  async ingestFiles(@UploadedFiles() files: UploadedFile[], @Body() body: IngestFilesDto) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one file is required');
     }
@@ -80,8 +94,7 @@ export class IngestController {
         });
         fileResults.push(result);
       } catch (error) {
-        const reason =
-          error instanceof Error ? error.message : 'Unexpected ingest failure';
+        const reason = error instanceof Error ? error.message : 'Unexpected ingest failure';
         fileResults.push({
           filename: file.originalname,
           docId: 'n/a',

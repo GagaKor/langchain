@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { LlmModule } from '../llm/llm.module';
 import { VectorStoreModule } from '../vector-store/vector-store.module';
-import { QueryController } from './query.controller';
-import { QueryService } from './query.service';
+import { HealthController } from './health.controller';
+import { HealthService } from './health.service';
 
 @Module({
   imports: [VectorStoreModule, LlmModule],
-  controllers: [QueryController],
-  providers: [QueryService],
+  controllers: [HealthController],
+  providers: [HealthService],
 })
-export class QueryModule {}
+export class HealthModule {}

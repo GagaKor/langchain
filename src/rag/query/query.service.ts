@@ -1,17 +1,21 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { ChatOpenAI } from '@langchain/openai';
+import { Injectable } from '@nestjs/common';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import type { Where } from 'chromadb';
 import { ChromaService } from '../chroma/chroma.service';
+import { OllamaService } from '../llm/ollama.service';
 
 interface QueryInput {
   question: string;
   topK?: number;
-  filters?: Record<string, unknown>;
+  filters?: Where;
 }
 
 @Injectable()
 export class QueryService {
-  constructor(private readonly chromaService: ChromaService) {}
+  constructor(
+    private readonly chromaService: ChromaService,
+    private readonly ollamaService: OllamaService,
+  ) {}
 
   async query(input: QueryInput) {
     const topK = input.topK ?? 6;
@@ -30,8 +34,7 @@ export class QueryService {
 
     if (retrieved.length === 0) {
       return {
-        answer:
-          '근거 부족: 질의와 관련된 문서를 찾지 못했습니다. 문서 인덱싱 상태를 확인해주세요.',
+        answer: '근거 부족: 질의와 관련된 문서를 찾지 못했습니다. 문서 인덱싱 상태를 확인해주세요.',
         citations: [],
         retrieved: [],
       };
@@ -64,16 +67,7 @@ export class QueryService {
       excerpt: string;
     }>,
   ): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new ServiceUnavailableException('OPENAI_API_KEY is missing');
-    }
-
-    const llm = new ChatOpenAI({
-      apiKey,
-      model: 'gpt-4o-mini',
-      temperature: 0.1,
-    });
+    const llm = this.ollamaService.getChatModel();
 
     const context = citations
       .map(
@@ -89,6 +83,7 @@ export class QueryService {
           'Use only the provided context.',
           'If evidence is weak or missing, explicitly say "근거 부족".',
           'Answer in Korean.',
+          'When appropriate, reference the citation numbers in brackets like [1].',
         ].join(' '),
       ),
       new HumanMessage(`질문:\n${question}\n\n근거 컨텍스트:\n${context}`),

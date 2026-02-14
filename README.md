@@ -1,4 +1,4 @@
-# NestJS RAG MVP (Chroma + LangChain.js)
+# NestJS RAG MVP (Chroma + Ollama + LangChain.js)
 
 사내 문서 기반 사업기획서 작성 MVP용 RAG 인프라입니다.
 
@@ -6,6 +6,17 @@
 
 ```bash
 docker-compose up -d
+# (옵션) API도 함께 띄울 경우
+# docker-compose --profile api up -d
+
+# 모델 다운로드 (컨테이너 내부에서 실행)
+# docker exec -it rag-ollama ollama pull llama3:8b
+# docker exec -it rag-ollama ollama pull nomic-embed-text
+#
+# (또는 curl)
+# curl -X POST http://localhost:11434/api/pull -d '{"name":"llama3:8b"}'
+# curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text"}'
+
 npm install
 npm run start:dev
 ```
@@ -14,10 +25,18 @@ npm run start:dev
 
 `.env.example` 참고:
 
-- `OPENAI_API_KEY`
 - `CHROMA_URL` (기본 `http://localhost:8000`)
+- `OLLAMA_BASE_URL` (기본 `http://localhost:11434`)
+- `OLLAMA_CHAT_MODEL` (기본 `llama3:8b`)
+- `OLLAMA_EMBED_MODEL` (기본 `nomic-embed-text`)
 - `COLLECTION_NAME` (기본 `mvp_docs`)
 - `PORT` (기본 `3000`)
+
+## WSL2 + GPU 확인
+
+```bash
+docker run --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
+```
 
 ## MVP 제한사항 (중요)
 
@@ -27,6 +46,8 @@ npm run start:dev
 - 인덱싱 실패 시 파일별 `status=failed`와 `reason` 반환, 다른 파일은 계속 처리(부분 성공 허용)
 
 ## API
+
+Swagger: `http://localhost:3000/docs`
 
 ### 1) 텍스트 직접 인덱싱
 
@@ -72,7 +93,7 @@ curl -X POST http://localhost:3000/query \
 
 ### 4) 헬스체크
 
-`GET /health` (Chroma 연결 확인 포함)
+`GET /health` (Chroma/Ollama 연결 확인 포함)
 
 ```bash
 curl http://localhost:3000/health
@@ -91,6 +112,7 @@ curl http://localhost:3000/health
 ```text
 .
 ├── docker-compose.yml
+├── Dockerfile
 ├── .env.example
 ├── data
 │   ├── sample_docs
@@ -109,11 +131,20 @@ curl http://localhost:3000/health
     │       └── http-exception.filter.ts
     └── rag
         ├── rag.module.ts
+        ├── health
+        │   ├── health.controller.ts
+        │   ├── health.service.ts
+        │   └── health.module.ts
+        ├── llm
+        │   ├── llm.module.ts
+        │   └── ollama.service.ts
         ├── shared
         │   └── constants.ts
         ├── chroma
         │   ├── chroma.module.ts
         │   └── chroma.service.ts
+        ├── vector-store
+        │   └── vector-store.module.ts
         ├── ingest
         │   ├── ingest.controller.ts
         │   ├── ingest.module.ts
@@ -134,13 +165,17 @@ curl http://localhost:3000/health
 
 ## Troubleshooting
 
+- GPU 미인식(WSL2/드라이버/toolkit)
+  - WSL2에서 NVIDIA 드라이버 및 Docker Desktop GPU 설정 확인
+  - `docker run --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi`로 확인
+- Ollama 모델 미다운로드
+  - `docker exec -it rag-ollama ollama pull llama3:8b`
+  - `docker exec -it rag-ollama ollama pull nomic-embed-text`
 - 텍스트 추출 실패(스캔 PDF 등)
   - `/ingest/files` 결과에서 해당 파일은 `status=failed`
   - `reason`: `Text extraction failed or empty content. Scanned/image-based files are not supported in MVP.`
 - 포트 충돌 (`8000` 또는 `3000`)
   - 사용 중 프로세스를 종료하거나 포트를 변경
-- `OPENAI_API_KEY` 누락
-  - 임베딩/질의 단계에서 `OPENAI_API_KEY is missing` 오류 발생
 - Chroma 연결 실패
   - `docker-compose ps`로 컨테이너 상태 확인
   - `curl http://localhost:8000/api/v1/heartbeat` 확인
