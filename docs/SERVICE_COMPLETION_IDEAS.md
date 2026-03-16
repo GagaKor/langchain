@@ -29,6 +29,14 @@
 - 적재된 근거 기반 질의 응답 1건 이상
 - 성공/실패 기준을 문서화
 
+#### 반영 내용
+
+- `docker-compose.yml` 의 Ollama 이미지를 `0.13.3` 으로 상향해 SDK 임베딩 호출과의 호환 기준을 맞췄다.
+- Chroma 연동은 현재 서버가 제공하는 v1 HTTP API 기준 어댑터로 정리해 `chromadb/chroma:0.5.5` 환경에서 실제 적재와 조회가 가능하도록 맞췄다.
+- `scripts/system-e2e.sh` 를 추가해 `health -> ingest/text -> ingest/files -> query` 실제 흐름을 한 번에 검증할 수 있게 했다.
+- `package.json` 에 `npm run test:system-e2e` 스크립트를 추가했다.
+- `README.md` 에 실행 절차와 완료 기준을 반영했다.
+
 #### 완료 기준
 
 - `GET /health` 가 `200`

@@ -67,7 +67,7 @@
 | Unit | `npm test -- --runInBand` | PASS | 외부 서비스 모킹 기반 |
 | Integration | `npm run test:e2e -- --runInBand` | PASS | `AppModule` 조립/검증/예외 포맷 확인 |
 | Runtime Boot | `npm run start` + `/docs` 확인 | PASS | 앱 부팅 및 Swagger 응답 확인 |
-| System E2E | `docker compose` + `health -> ingest -> query` | 진행 중 / 실패 원인 확인 | Ollama 버전 호환성 문제 식별 |
+| System E2E | `npm run test:system-e2e` | PASS | `health -> ingest/text -> ingest/files -> query` 실제 흐름 완료 |
 
 ### 단위 테스트
 
@@ -82,6 +82,19 @@
 - 결과: `PASS`
 - 통과 스위트: 1
 - 통과 테스트: 5
+
+### 시스템 e2e
+
+- 실행 명령어: `npm run test:system-e2e`
+- 결과: `PASS`
+- 실제 확인 순서
+  - `GET /health`
+  - `POST /ingest/text`
+  - `POST /ingest/files`
+  - `POST /query`
+- 해석
+  - 현재 저장소 기준 실제 문서 적재와 근거 기반 질의 응답 흐름이 끝까지 완료됐다.
+  - 최소 완료 기준이었던 `answer`, `citations`, `retrieved` 유효성도 함께 확인했다.
 
 ## 6. 실제 구동 확인 결과
 
@@ -167,8 +180,39 @@
 
 ### 6. 현재 상태
 - Compose 파일 수정 완료
-- 새 Ollama 이미지 pull 진행 중
-- pull 완료 전까지는 실제 적재/질의 e2e 재검증이 보류 상태
+- 새 Ollama 이미지 적용 완료
+- 실제 적재/질의 e2e 재검증까지 완료
+
+## [INCIDENT-20260316-003] Chroma SDK와 서버 API 버전 불일치로 실제 적재 실패
+
+### 1. 요약
+- 장애 유형: `External Dependency`
+- 발생 일시: 2026-03-16
+- 발견 경로: `npm run test:system-e2e` 의 `POST /ingest/text`
+- 심각도: 중간
+
+### 2. 증상
+- `/health` 는 `200` 이지만 `POST /ingest/text` 가 `500` 으로 실패했다.
+
+### 3. 관측 근거
+- 로컬 재현 코드에서 `Chroma getOrCreateCollection error: ChromaNotFoundError` 확인
+- Chroma 컨테이너 로그에서 `POST /api/v2/tenants/default_tenant/databases/default_database/collections` 가 `404`
+- 서버 OpenAPI 확인 결과 현재 컨테이너는 `/api/v1/collections` 계열 엔드포인트를 제공
+
+### 4. 원인 분석
+- `@langchain/community` 의 현재 Chroma 래퍼가 `chromadb` SDK를 통해 `/api/v2/...` 경로를 사용했다.
+- 반면 현재 실행 중인 `chromadb/chroma:0.5.5` 는 컬렉션 생성과 질의에 v1 HTTP API를 제공한다.
+- 즉, heartbeat 는 통과하지만 실제 적재/검색 경로에서만 버전 불일치가 터지는 상태였다.
+
+### 5. 해결 방법
+- `src/rag/chroma/chroma.service.ts` 를 Chroma v1 HTTP API 직접 호출 방식으로 교체했다.
+- 컬렉션 생성/재사용, upsert, query 를 모두 v1 기준으로 처리하도록 변경했다.
+- `src/rag/chroma/chroma.service.spec.ts` 로 v1 요청 형식을 검증하는 테스트를 추가했다.
+
+### 6. 검증 결과
+- `npm test -- --runInBand src/rag/chroma/chroma.service.spec.ts src/rag/query/query.service.spec.ts src/rag/ingest/services/ingest.service.spec.ts` 통과
+- `npm run test:e2e -- --runInBand` 통과
+- `npm run test:system-e2e` 통과
 
 ## 8. 실패 시 원인과 해결 방법
 
@@ -250,13 +294,11 @@ curl http://127.0.0.1:11434/api/tags
 ## 9. 남은 확인 항목
 
 - 현재 우선순위
-  - 유닛 테스트와 모킹 기반 통합 테스트를 계속 보강
-  - 외부 의존성 없이도 서비스 로직 회귀를 빠르게 잡는 체계 유지
+  - 시스템 e2e를 CI 또는 스크립트 자동화 흐름으로 더 고정
+  - 외부 의존성 버전 정책을 README와 compose 기준으로 계속 동기화
 
 - 다음 단계
-  - `docker compose up -d` 또는 별도 실행으로 `Chroma`, `Ollama` 를 기동한 뒤 시스템 e2e 수행
-
-- `docker compose up -d` 또는 별도 실행으로 `Chroma`, `Ollama` 를 기동한 뒤 아래를 추가 확인하면 된다.
-  - `GET /health` 가 `200` 인지
+  - `test:system-e2e` 를 CI 또는 별도 검증 파이프라인에 연결
+  - Docker/외부 의존성 버전 호환성 문서를 실제 운영 절차 기준으로 정리
   - `POST /ingest/text` 실제 적재 성공 여부
   - 샘플 문서 파일 업로드 후 `POST /query` 응답 품질
