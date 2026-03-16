@@ -1,5 +1,8 @@
-import { IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+export const OCR_MODES = ['off', 'auto'] as const;
+export type OcrMode = (typeof OCR_MODES)[number];
 
 export class IngestFilesDto {
   @ApiPropertyOptional({ description: 'Project name for filtering' })
@@ -16,4 +19,13 @@ export class IngestFilesDto {
   @IsOptional()
   @IsDateString()
   createdAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'OCR fallback mode for scanned PDFs',
+    enum: OCR_MODES,
+    default: 'off',
+  })
+  @IsOptional()
+  @IsIn(OCR_MODES)
+  ocrMode?: OcrMode;
 }

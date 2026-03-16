@@ -4,33 +4,88 @@ import { extname } from 'node:path';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse';
 import JSZip from 'jszip';
+import { OcrMode } from '../dto/ingest-files.dto';
+import { OcrService } from './ocr.service';
 
 export interface ExtractedSegment {
   text: string;
   pageOrSlide: number;
 }
 
+export interface FileExtractionResult {
+  segments: ExtractedSegment[];
+  extractionMethod: 'native' | 'ocr';
+  reason?: string;
+}
+
 @Injectable()
 export class TextExtractorService {
-  async extractByFile(filePath: string): Promise<ExtractedSegment[]> {
+  constructor(private readonly ocrService: OcrService) {}
+
+  async extractByFile(filePath: string, ocrMode: OcrMode = 'off'): Promise<FileExtractionResult> {
     const extension = extname(filePath).toLowerCase();
 
     switch (extension) {
       case '.pdf':
-        return this.extractPdf(filePath);
+        return this.extractPdf(filePath, ocrMode);
       case '.docx':
-        return this.extractDocx(filePath);
+        return {
+          segments: await this.extractDocx(filePath),
+          extractionMethod: 'native',
+        };
       case '.pptx':
-        return this.extractPptx(filePath);
+        return {
+          segments: await this.extractPptx(filePath),
+          extractionMethod: 'native',
+        };
       case '.txt':
       case '.md':
-        return this.extractPlainText(filePath);
+        return {
+          segments: await this.extractPlainText(filePath),
+          extractionMethod: 'native',
+        };
       default:
-        return [];
+        return {
+          segments: [],
+          extractionMethod: 'native',
+        };
     }
   }
 
-  private async extractPdf(filePath: string): Promise<ExtractedSegment[]> {
+  private async extractPdf(filePath: string, ocrMode: OcrMode): Promise<FileExtractionResult> {
+    const nativeSegments = await this.extractPdfNative(filePath);
+    if (nativeSegments.length > 0) {
+      return {
+        segments: nativeSegments,
+        extractionMethod: 'native',
+      };
+    }
+
+    if (ocrMode === 'auto') {
+      try {
+        const ocrSegments = await this.ocrService.extractPdf(filePath);
+        return {
+          segments: ocrSegments,
+          extractionMethod: 'ocr',
+          reason:
+            ocrSegments.length === 0 ? 'OCR completed but no text content was detected.' : undefined,
+        };
+      } catch (error) {
+        return {
+          segments: [],
+          extractionMethod: 'ocr',
+          reason: error instanceof Error ? error.message : 'OCR extraction failed',
+        };
+      }
+    }
+
+    return {
+      segments: [],
+      extractionMethod: 'native',
+    };
+  }
+
+  private async extractPdfNative(filePath: string): Promise<ExtractedSegment[]> {
     const buffer = await readFile(filePath);
     const parsed = await pdf(buffer);
 

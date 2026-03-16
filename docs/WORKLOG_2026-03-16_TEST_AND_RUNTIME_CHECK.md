@@ -58,6 +58,23 @@
   - 상태 코드별 기본 `error` 라벨을 동적으로 생성하도록 수정
   - 실제 `/health` 503 응답에서 `Internal Server Error`가 내려가던 문제를 `Service Unavailable`로 수정
 
+### Sprint A 기능 확장
+
+- `src/rag/ingest/services/ingest-job.service.ts`
+  - 파일 적재를 비동기 job 으로 처리하는 인메모리 queue 추가
+  - `queued`, `processing`, `completed`, `failed` 상태 관리
+
+- `src/rag/ingest/ingest.controller.ts`
+  - `POST /ingest/files` 를 job 생성 방식으로 전환
+  - `GET /ingest/jobs/:jobId` 상태 조회 엔드포인트 추가
+
+- `src/rag/ingest/services/ocr.service.ts`
+  - `tesseract` + `pdftoppm` 기반 스캔 PDF OCR fallback 추가
+
+- `src/rag/ingest/services/text-extractor.service.ts`
+  - PDF native 추출 실패 시 `ocrMode=auto` 조건에서 OCR fallback 연결
+  - `extractionMethod` 와 실패 사유 반환 구조 추가
+
 ## 5. 실행 결과
 
 ### 테스트 결과 요약
@@ -67,7 +84,7 @@
 | Unit | `npm test -- --runInBand` | PASS | 외부 서비스 모킹 기반 |
 | Integration | `npm run test:e2e -- --runInBand` | PASS | `AppModule` 조립/검증/예외 포맷 확인 |
 | Runtime Boot | `npm run start` + `/docs` 확인 | PASS | 앱 부팅 및 Swagger 응답 확인 |
-| System E2E | `npm run test:system-e2e` | PASS | `health -> ingest/text -> ingest/files -> query` 실제 흐름 완료 |
+| System E2E | `npm run test:system-e2e` | PASS | `health -> ingest/text -> ingest/files -> ingest/jobs -> query` 실제 흐름 완료 |
 
 ### 단위 테스트
 
@@ -91,6 +108,7 @@
   - `GET /health`
   - `POST /ingest/text`
   - `POST /ingest/files`
+  - `GET /ingest/jobs/:jobId`
   - `POST /query`
 - 해석
   - 현재 저장소 기준 실제 문서 적재와 근거 기반 질의 응답 흐름이 끝까지 완료됐다.
@@ -211,6 +229,28 @@
 
 ### 6. 검증 결과
 - `npm test -- --runInBand src/rag/chroma/chroma.service.spec.ts src/rag/query/query.service.spec.ts src/rag/ingest/services/ingest.service.spec.ts` 통과
+- `npm run test:e2e -- --runInBand` 통과
+- `npm run test:system-e2e` 통과
+
+## [INCIDENT-20260316-004] Sprint A에서 파일 적재를 비동기 job 구조로 전환
+
+### 1. 요약
+- 작업 유형: `Application`
+- 적용 일시: 2026-03-16
+- 적용 범위: `POST /ingest/files`, `GET /ingest/jobs/:jobId`
+- 심각도: 낮음
+
+### 2. 변경 배경
+- OCR fallback 과 대용량 파일 처리를 동기 요청으로 유지하면 응답 지연과 타임아웃 위험이 커진다.
+- 따라서 Sprint A 범위에서는 파일 적재를 먼저 비동기 job 구조로 바꾸는 것이 합리적이었다.
+
+### 3. 적용 내용
+- 파일 업로드는 즉시 `jobId` 와 `status=queued` 를 반환하도록 변경
+- 백그라운드에서 실제 추출, OCR fallback, 임베딩, 저장 수행
+- `GET /ingest/jobs/:jobId` 로 상태와 파일별 결과 조회 가능하도록 구현
+
+### 4. 검증 결과
+- `src/rag/ingest/services/ingest-job.service.spec.ts` 통과
 - `npm run test:e2e -- --runInBand` 통과
 - `npm run test:system-e2e` 통과
 

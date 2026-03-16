@@ -48,6 +48,25 @@ validate_json() {
   " "$file"
 }
 
+json_eval() {
+  local file="$1"
+  local expression="$2"
+
+  node -e "
+    const fs = require('node:fs');
+    const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+    const value = (() => { return ${expression}; })();
+    if (value === undefined || value === null || value === '') {
+      process.exit(1);
+    }
+    if (typeof value === 'object') {
+      console.log(JSON.stringify(value));
+    } else {
+      console.log(String(value));
+    }
+  " "$file"
+}
+
 json_string() {
   node -pe 'JSON.stringify(process.argv[1])' "$1"
 }
@@ -101,7 +120,39 @@ if [[ "$FILES_CODE" != "201" && "$FILES_CODE" != "200" ]]; then
   cat "$FILES_BODY" >&2
   exit 1
 fi
-validate_json "$FILES_BODY" "Array.isArray(data.files) && data.files.length >= 1 && data.files.some((file) => file.status === 'ok' && Number.isInteger(file.ingested) && file.ingested > 0)"
+validate_json "$FILES_BODY" "typeof data.jobId === 'string' && data.jobId.length > 0 && ['queued', 'processing'].includes(data.status) && typeof data.collection === 'string'"
+JOB_ID="$(json_eval "$FILES_BODY" "data.jobId")"
+
+JOB_BODY="$WORK_DIR/ingest-job.json"
+for attempt in $(seq 1 30); do
+  JOB_CODE="$(request GET "$API_BASE_URL/ingest/jobs/$JOB_ID" "$JOB_BODY")"
+  if [[ "$JOB_CODE" != "200" ]]; then
+    echo "Job status lookup failed with HTTP $JOB_CODE" >&2
+    cat "$JOB_BODY" >&2
+    exit 1
+  fi
+
+  JOB_STATUS="$(json_eval "$JOB_BODY" "data.status")"
+  if [[ "$JOB_STATUS" == "completed" ]]; then
+    break
+  fi
+
+  if [[ "$JOB_STATUS" == "failed" ]]; then
+    echo "Ingest job failed" >&2
+    cat "$JOB_BODY" >&2
+    exit 1
+  fi
+
+  sleep 1
+done
+
+if [[ "${JOB_STATUS:-}" != "completed" ]]; then
+  echo "Ingest job did not complete within the timeout window" >&2
+  cat "$JOB_BODY" >&2
+  exit 1
+fi
+
+validate_json "$JOB_BODY" "Array.isArray(data.files) && data.files.length >= 1 && data.files.some((file) => file.status === 'ok' && Number.isInteger(file.ingested) && file.ingested > 0)"
 
 echo "[4/4] Querying grounded response"
 QUERY_BODY="$WORK_DIR/query.json"
