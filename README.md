@@ -21,11 +21,19 @@ npm install
 npm run start:dev
 ```
 
+실제 시스템 e2e 검증은 API와 외부 의존성이 모두 떠 있는 상태에서 아래로 실행합니다.
+
+```bash
+npm run test:system-e2e
+```
+
 ## 환경변수
 
 `.env.example` 참고:
 
 - `CHROMA_URL` (기본 `http://localhost:8000`)
+- `CHROMA_TENANT` (기본 `default_tenant`)
+- `CHROMA_DATABASE` (기본 `default_database`)
 - `OLLAMA_BASE_URL` (기본 `http://localhost:11434`)
 - `OLLAMA_CHAT_MODEL` (기본 `llama3:8b`)
 - `OLLAMA_EMBED_MODEL` (기본 `nomic-embed-text`)
@@ -98,6 +106,24 @@ curl -X POST http://localhost:3000/query \
 ```bash
 curl http://localhost:3000/health
 ```
+
+## 시스템 e2e 완료 기준
+
+- `GET /health` 가 `200` 이고 `status=ok`, `chroma=ok`, `ollama=ok`
+- `POST /ingest/text` 가 성공하고 `ingested > 0`
+- `POST /ingest/files` 에서 최소 1개 이상 `status=ok`
+- `POST /query` 응답에 `answer`, `citations`, `retrieved` 가 모두 유효하게 포함
+
+기본 검증 스크립트는 아래 순서로 실제 흐름을 점검합니다.
+
+1. `/health`
+2. `/ingest/text`
+3. `/ingest/files`
+4. `/query`
+
+기본 샘플 파일은 `data/sample_docs/sample_notes.txt`, `data/sample_docs/sample_overview.md` 이며, 필요하면 `API_BASE_URL`, `PROJECT_KEY`, `FILE_ONE`, `FILE_TWO` 환경변수로 바꿀 수 있습니다.
+
+현재 런타임은 Chroma 서버의 v1 HTTP API에 맞춰 동작합니다. 따라서 `chromadb/chroma:0.5.x` 조합에서도 컬렉션 생성, 문서 upsert, similarity query가 실제로 완료됩니다.
 
 ## 샘플 문서
 
