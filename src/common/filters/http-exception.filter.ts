@@ -15,7 +15,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException ? exception.getResponse() : undefined;
 
     let message: string | string[] = 'Internal server error';
-    let error = 'Internal Server Error';
+    let error = this.toStatusLabel(status);
     let details: Record<string, unknown> | undefined;
 
     if (typeof exceptionResponse === 'string') {
@@ -73,5 +73,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
         error,
       },
     });
+  }
+
+  private toStatusLabel(status: number): string {
+    const label = HttpStatus[status];
+    if (typeof label !== 'string') {
+      return 'Internal Server Error';
+    }
+
+    return label
+      .toLowerCase()
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }
