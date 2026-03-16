@@ -79,12 +79,16 @@ describe('IngestService', () => {
       ingested: 0,
       status: 'failed',
       reason: 'Unsupported file type: .exe',
+      extractionMethod: 'native',
     });
     expect(textExtractorService.extractByFile).not.toHaveBeenCalled();
   });
 
   it('returns failed when extraction is empty', async () => {
-    jest.spyOn(textExtractorService, 'extractByFile').mockResolvedValue([]);
+    jest.spyOn(textExtractorService, 'extractByFile').mockResolvedValue({
+      segments: [],
+      extractionMethod: 'native',
+    });
 
     const result = await service.ingestFile({
       file: {
@@ -99,17 +103,21 @@ describe('IngestService', () => {
       ingested: 0,
       status: 'failed',
       reason: 'Text extraction failed or empty content. Scanned/image-based files are not supported in MVP.',
+      extractionMethod: 'native',
     });
     expect(chunkingService.chunkSegments).not.toHaveBeenCalled();
   });
 
   it('ingests extracted file segments with sanitized metadata', async () => {
-    jest.spyOn(textExtractorService, 'extractByFile').mockResolvedValue([
-      {
-        text: 'alpha',
-        pageOrSlide: 3,
-      },
-    ]);
+    jest.spyOn(textExtractorService, 'extractByFile').mockResolvedValue({
+      segments: [
+        {
+          text: 'alpha',
+          pageOrSlide: 3,
+        },
+      ],
+      extractionMethod: 'native',
+    });
     const docs = [
       new Document({
         pageContent: 'alpha',
@@ -134,6 +142,7 @@ describe('IngestService', () => {
       docId: expect.any(String),
       ingested: 1,
       status: 'ok',
+      extractionMethod: 'native',
     });
     expect(chunkingService.chunkSegments).toHaveBeenCalledWith(
       [{ text: 'alpha', pageOrSlide: 3 }],
@@ -142,6 +151,7 @@ describe('IngestService', () => {
         docType: 'brief',
         createdAt: '2025-03-16T12:00:00.000Z',
         project: 'mvp',
+        extractionMethod: 'native',
       }),
     );
     expect(chromaService.addDocuments).toHaveBeenCalledWith(docs);

@@ -12,6 +12,7 @@ export interface IngestedFileResult {
   ingested: number;
   status: 'ok' | 'failed';
   reason?: string;
+  extractionMethod: 'native' | 'ocr';
 }
 
 interface IngestTextInput {
@@ -27,6 +28,7 @@ interface IngestFileInput {
   project?: string;
   docType?: string;
   createdAt?: string;
+  ocrMode?: 'off' | 'auto';
 }
 
 @Injectable()
@@ -71,18 +73,23 @@ export class IngestService {
         ingested: 0,
         status: 'failed',
         reason: `Unsupported file type: ${extension || 'unknown'}`,
+        extractionMethod: 'native',
       };
     }
 
-    const segments = await this.textExtractorService.extractByFile(input.file.path);
+    const extraction = await this.textExtractorService.extractByFile(
+      input.file.path,
+      input.ocrMode ?? 'off',
+    );
 
-    if (segments.length === 0) {
+    if (extraction.segments.length === 0) {
       return {
         filename: input.file.originalname,
         docId,
         ingested: 0,
         status: 'failed',
-        reason: EXTRACTION_FAILURE_MESSAGE,
+        reason: extraction.reason ?? EXTRACTION_FAILURE_MESSAGE,
+        extractionMethod: extraction.extractionMethod,
       };
     }
 
@@ -92,9 +99,10 @@ export class IngestService {
       docType: input.docType ?? extension.replace('.', ''),
       createdAt: input.createdAt ?? new Date().toISOString(),
       project: input.project ?? null,
+      extractionMethod: extraction.extractionMethod,
     });
 
-    const documents = await this.chunkingService.chunkSegments(segments, baseMetadata);
+    const documents = await this.chunkingService.chunkSegments(extraction.segments, baseMetadata);
 
     const ingested = await this.chromaService.addDocuments(documents);
 
@@ -103,6 +111,7 @@ export class IngestService {
       docId,
       ingested,
       status: 'ok',
+      extractionMethod: extraction.extractionMethod,
     };
   }
 

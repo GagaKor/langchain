@@ -37,6 +37,7 @@ npm run test:system-e2e
 - `OLLAMA_BASE_URL` (기본 `http://localhost:11434`)
 - `OLLAMA_CHAT_MODEL` (기본 `llama3:8b`)
 - `OLLAMA_EMBED_MODEL` (기본 `nomic-embed-text`)
+- `OCR_LANGUAGE` (기본 `eng`)
 - `COLLECTION_NAME` (기본 `mvp_docs`)
 - `PORT` (기본 `3000`)
 
@@ -48,10 +49,10 @@ docker run --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 
 ## MVP 제한사항 (중요)
 
-- 이미지/OCR 미지원
-- 스캔 PDF(이미지 기반) 또는 텍스트 추출 불가 문서는 인덱싱 실패 처리
+- OCR 은 `tesseract` 와 `pdftoppm` 이 설치된 환경에서만 스캔 PDF fallback 으로 동작
+- OCR 대상은 현재 스캔 PDF 로 한정
 - 표/도형/이미지에서 텍스트가 추출되지 않으면 무시(레이아웃 보존 없음)
-- 인덱싱 실패 시 파일별 `status=failed`와 `reason` 반환, 다른 파일은 계속 처리(부분 성공 허용)
+- 파일 적재는 비동기 job 으로 처리되며 `GET /ingest/jobs/:jobId` 로 상태를 조회
 
 ## API
 
@@ -72,18 +73,38 @@ curl -X POST http://localhost:3000/ingest/text \
 
 ### 2) 파일 업로드 인덱싱
 
-`POST /ingest/files` (multipart/form-data, 다중 파일)
+`POST /ingest/files` (multipart/form-data, 다중 파일, 비동기 job 생성)
 
 ```bash
 curl -X POST http://localhost:3000/ingest/files \
   -F "project=internal-mvp" \
   -F "docType=planning" \
+  -F "ocrMode=off" \
   -F "files=@data/sample_docs/sample_text.pdf" \
   -F "files=@data/sample_docs/sample_plan.docx" \
   -F "files=@data/sample_docs/sample_pitch.pptx"
 ```
 
-### 3) 질의
+응답 예시:
+
+```json
+{
+  "jobId": "a-job-id",
+  "status": "queued",
+  "collection": "mvp_docs",
+  "ocrMode": "off"
+}
+```
+
+### 3) 적재 상태 조회
+
+`GET /ingest/jobs/:jobId`
+
+```bash
+curl http://localhost:3000/ingest/jobs/a-job-id
+```
+
+### 4) 질의
 
 `POST /query`
 
@@ -99,7 +120,7 @@ curl -X POST http://localhost:3000/query \
 
 응답에는 `answer`, `citations`, `retrieved`가 포함됩니다. `citations`는 반드시 retrieved excerpt 기반입니다.
 
-### 4) 헬스체크
+### 5) 헬스체크
 
 `GET /health` (Chroma/Ollama 연결 확인 포함)
 
@@ -111,7 +132,7 @@ curl http://localhost:3000/health
 
 - `GET /health` 가 `200` 이고 `status=ok`, `chroma=ok`, `ollama=ok`
 - `POST /ingest/text` 가 성공하고 `ingested > 0`
-- `POST /ingest/files` 에서 최소 1개 이상 `status=ok`
+- `POST /ingest/files` 가 `jobId` 를 반환하고 상태 조회에서 최소 1개 이상 `status=ok`
 - `POST /query` 응답에 `answer`, `citations`, `retrieved` 가 모두 유효하게 포함
 
 기본 검증 스크립트는 아래 순서로 실제 흐름을 점검합니다.
@@ -119,11 +140,13 @@ curl http://localhost:3000/health
 1. `/health`
 2. `/ingest/text`
 3. `/ingest/files`
-4. `/query`
+4. `/ingest/jobs/:jobId`
+5. `/query`
 
 기본 샘플 파일은 `data/sample_docs/sample_notes.txt`, `data/sample_docs/sample_overview.md` 이며, 필요하면 `API_BASE_URL`, `PROJECT_KEY`, `FILE_ONE`, `FILE_TWO` 환경변수로 바꿀 수 있습니다.
 
 현재 런타임은 Chroma 서버의 v1 HTTP API에 맞춰 동작합니다. 따라서 `chromadb/chroma:0.5.x` 조합에서도 컬렉션 생성, 문서 upsert, similarity query가 실제로 완료됩니다.
+OCR fallback 은 `tesseract`, `pdftoppm` 이 둘 다 설치된 환경에서만 활성화됩니다.
 
 ## 샘플 문서
 
@@ -198,8 +221,11 @@ curl http://localhost:3000/health
   - `docker exec -it rag-ollama ollama pull llama3:8b`
   - `docker exec -it rag-ollama ollama pull nomic-embed-text`
 - 텍스트 추출 실패(스캔 PDF 등)
-  - `/ingest/files` 결과에서 해당 파일은 `status=failed`
+  - `/ingest/jobs/:jobId` 결과에서 해당 파일은 `status=failed`
   - `reason`: `Text extraction failed or empty content. Scanned/image-based files are not supported in MVP.`
+- OCR fallback 미동작
+  - `tesseract`, `pdftoppm` 가 모두 설치되어 있는지 확인
+  - `ocrMode=auto` 로 요청했는지 확인
 - 포트 충돌 (`8000` 또는 `3000`)
   - 사용 중 프로세스를 종료하거나 포트를 변경
 - Chroma 연결 실패

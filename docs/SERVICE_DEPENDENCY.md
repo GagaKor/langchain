@@ -28,6 +28,7 @@
 ### 내부 모듈
 
 - `ingest`
+- `ingest-job`
 - `query`
 - `health`
 - `vector-store`
@@ -46,6 +47,9 @@
 
 - `ingest -> vector-store (방식: Module Dependency)`  
   근거: [src/rag/ingest/ingest.module.ts](../src/rag/ingest/ingest.module.ts)
+
+- `ingest -> ingest-job (방식: Module Dependency)`  
+  근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/ingest/services/ingest-job.service.ts](../src/rag/ingest/services/ingest-job.service.ts)
 
 - `query -> vector-store (방식: Module Dependency)`  
   근거: [src/rag/query/query.module.ts](../src/rag/query/query.module.ts)
@@ -68,6 +72,9 @@
 - `api-server -> data/uploads (방식: File System)`  
   근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts)
 
+- `api-server -> local OCR tools (방식: Process Execution)`  
+  근거: [src/rag/ingest/services/ocr.service.ts](../src/rag/ingest/services/ocr.service.ts)
+
 ### 추정 내용
 
 - 현재 구조는 별도 백엔드 서비스 간 통신이 아니라, 하나의 `api-server` 가 외부 AI/벡터 저장소에 의존하는 구조로 운영되는 것으로 보인다.  
@@ -89,14 +96,18 @@
   - `chroma`
   - `ollama`
   - `data/uploads`
+  - `tesseract`
+  - `pdftoppm`
 - 연결 방식
   - `(방식: HTTP)` to `chroma`
   - `(방식: HTTP)` to `ollama`
   - `(방식: File System)` to `data/uploads`
+  - `(방식: Process Execution)` to local OCR tools
 - 근거
   - [src/rag/chroma/chroma.service.ts](../src/rag/chroma/chroma.service.ts)
   - [src/rag/llm/ollama.service.ts](../src/rag/llm/ollama.service.ts)
   - [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts)
+  - [src/rag/ingest/services/ocr.service.ts](../src/rag/ingest/services/ocr.service.ts)
   - [docker-compose.yml](../docker-compose.yml)
 
 ### chroma
@@ -126,6 +137,7 @@
   - `data/uploads`
   - 내부 `TextExtractorService`
   - 내부 `ChunkingService`
+  - 내부 `OcrService`
 - 연결 방식
   - `(방식: Module Dependency)` to `vector-store`
   - `(방식: File System)` to `data/uploads`
@@ -133,6 +145,18 @@
   - [src/rag/ingest/ingest.module.ts](../src/rag/ingest/ingest.module.ts)
   - [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts)
   - [src/rag/ingest/services/ingest.service.ts](../src/rag/ingest/services/ingest.service.ts)
+  - [src/rag/ingest/services/text-extractor.service.ts](../src/rag/ingest/services/text-extractor.service.ts)
+  - [src/rag/ingest/services/ocr.service.ts](../src/rag/ingest/services/ocr.service.ts)
+
+### ingest-job
+
+- 호출 대상
+  - `ingest`
+  - `vector-store`
+- 연결 방식
+  - `(방식: Module Dependency)`
+- 근거
+  - [src/rag/ingest/services/ingest-job.service.ts](../src/rag/ingest/services/ingest-job.service.ts)
 
 ### query
 
@@ -203,6 +227,11 @@
   - embeddings 생성
   - chat model 호출
   - 근거: [src/rag/llm/ollama.service.ts](../src/rag/llm/ollama.service.ts), [src/rag/query/query.service.ts](../src/rag/query/query.service.ts)
+
+- `api-server -> local OCR tools (방식: Process Execution)`
+  - `tesseract`
+  - `pdftoppm`
+  - 근거: [src/rag/ingest/services/ocr.service.ts](../src/rag/ingest/services/ocr.service.ts)
 
 ### 확인 필요 사항
 

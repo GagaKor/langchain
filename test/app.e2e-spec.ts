@@ -7,6 +7,7 @@ import { HealthController } from './../src/rag/health/health.controller';
 import { HealthService } from './../src/rag/health/health.service';
 import { IngestController } from './../src/rag/ingest/ingest.controller';
 import { IngestTextDto } from './../src/rag/ingest/dto/ingest-text.dto';
+import { IngestJobService } from './../src/rag/ingest/services/ingest-job.service';
 import { IngestService } from './../src/rag/ingest/services/ingest.service';
 import { QueryDto } from './../src/rag/query/dto/query.dto';
 import { ServiceUnavailableException } from '@nestjs/common';
@@ -23,6 +24,10 @@ describe('App integration', () => {
     ingestText: jest.fn(),
     ingestFile: jest.fn(),
   };
+  const ingestJobServiceMock = {
+    queueFiles: jest.fn(),
+    getJob: jest.fn(),
+  };
   const chromaServiceMock = {
     getCollectionName: jest.fn().mockReturnValue('test_collection'),
   };
@@ -35,6 +40,8 @@ describe('App integration', () => {
       .useValue(healthServiceMock)
       .overrideProvider(IngestService)
       .useValue(ingestServiceMock)
+      .overrideProvider(IngestJobService)
+      .useValue(ingestJobServiceMock)
       .overrideProvider(ChromaService)
       .useValue(chromaServiceMock)
       .compile();
