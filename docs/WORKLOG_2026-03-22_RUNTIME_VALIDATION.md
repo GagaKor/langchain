@@ -24,7 +24,7 @@
 ## 4. 실행 환경
 
 - 작업 디렉토리: `/home/kwon/project/langchain`
-- API_BASE_URL: `http://127.0.0.1:3000`
+- API_BASE_URL: `http://127.0.0.1:3300`
 - Chroma 컨테이너: `rag-chroma`
 - Ollama 컨테이너: `rag-ollama`
 - `.env` 기준 주요 설정
@@ -43,7 +43,7 @@
 
 ### 5-2. API health 확인
 
-- 실행 명령어: `curl -i -sS http://127.0.0.1:3000/health`
+- 실행 명령어: `curl -i -sS http://127.0.0.1:3300/health`
 - 결과: `HTTP/1.1 200 OK`
 - 응답 본문:
 
@@ -76,7 +76,7 @@
 | 구분 | 명령어 | 결과 | 해석 |
 |---|---|---|---|
 | Unit | `npm test -- --runInBand` | PASS | 코드 레벨 검증 완료 |
-| Runtime Health | `curl http://127.0.0.1:3000/health` | PASS | API, Chroma, Ollama 연결 정상 |
+| Runtime Health | `curl http://127.0.0.1:3300/health` | PASS | API, Chroma, Ollama 연결 정상 |
 | System E2E | `npm run test:system-e2e` | PASS | ingest/query 실제 흐름 완료 |
 | Dependency Check | `docker compose ps` | PASS | Chroma, Ollama healthy |
 

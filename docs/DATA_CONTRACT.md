@@ -18,7 +18,7 @@
 
 ### 확실한 내용
 
-- API 기본 포트는 `3000` 이다.  
+- API 기본 포트는 `3300` 이다.  
   근거: [src/main.ts](../src/main.ts), [.env.example](../.env.example)
 
 - Swagger 문서는 `/docs` 에서 제공된다.  
@@ -167,7 +167,7 @@
 ### 요청 예시
 
 ```bash
-curl -X POST http://localhost:3000/ingest/files \
+curl -X POST http://localhost:3300/ingest/files \
   -F "project=internal-mvp" \
   -F "docType=planning" \
   -F "files=@data/sample_docs/sample_text.pdf" \
@@ -581,7 +581,7 @@ curl -X POST http://localhost:3000/ingest/files \
 ### 환경변수 계약
 
 - `PORT`
-  - 기본값: `3000`
+  - 기본값: `3300`
 
 - `CHROMA_URL`
   - 기본값: `http://localhost:8000`

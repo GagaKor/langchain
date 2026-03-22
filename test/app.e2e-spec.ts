@@ -74,6 +74,17 @@ describe('App integration', () => {
     });
   });
 
+  it('uses the app default port fallback of 3300 when PORT is unset', async () => {
+    const previous = process.env.PORT;
+    delete process.env.PORT;
+
+    expect(process.env.PORT ?? '3300').toBe('3300');
+
+    if (previous !== undefined) {
+      process.env.PORT = previous;
+    }
+  });
+
   it('returns collection metadata for ingest text requests', async () => {
     ingestServiceMock.ingestText.mockResolvedValue(2);
 

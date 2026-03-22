@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:3000}"
+API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:3300}"
 PROJECT_KEY="${PROJECT_KEY:-system-e2e}"
 TEXT_SAMPLE="${TEXT_SAMPLE:-내부 기획 문서 초안: 시스템 e2e 검증 범위는 health, ingest, query 전체 흐름이다.}"
 FILE_ONE="${FILE_ONE:-data/sample_docs/sample_notes.txt}"
