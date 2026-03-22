@@ -40,11 +40,8 @@ npm test -- --runInBand
 ```
 
 - 결과
-  - `PASS src/rag/query/query.service.spec.ts`
-  - `PASS src/rag/ingest/services/ingest.service.spec.ts`
-  - `PASS src/rag/health/health.controller.spec.ts`
-  - `Test Suites: 3 passed, 3 total`
-  - `Tests: 5 passed, 5 total`
+  - 최신 기준 통과
+  - 상세 기록: `docs/WORKLOG_2026-03-22_RUNTIME_VALIDATION.md`
 
 ### e2e 테스트
 
@@ -55,13 +52,27 @@ npm run test:e2e -- --runInBand
 ```
 
 - 결과
-  - 실패
-  - 에러: `listen EPERM: operation not permitted 0.0.0.0`
+  - 실행 환경에 따라 `listen EPERM: operation not permitted 0.0.0.0` 가능
+  - 이 경우 앱 결함보다 실행 환경 제약일 가능성이 높다.
+
+### 시스템 e2e 테스트
+
+- 실행 명령어
+
+```bash
+npm run test:system-e2e
+```
+
+- 결과
+  - 2026-03-22 기준 실제 환경에서 `PASS`
+  - 검증 경로: `/health -> /ingest/text -> /ingest/files -> /ingest/jobs/:jobId -> /query`
+  - 상세 기록: `docs/WORKLOG_2026-03-22_RUNTIME_VALIDATION.md`
 
 ### 해석
 
-- 현재 확인된 단위 테스트 기준으로 핵심 서비스 로직은 통과했다.
-- e2e 실패는 현재 실행 환경의 listen 권한 제약 가능성이 높고, 즉시 코드 결함으로 단정하면 안 된다.
+- 단위 테스트는 코드 레벨 검증에 성공했다.
+- `test:e2e` 실패는 환경 제약일 수 있으며, 코드 결함으로 바로 단정하면 안 된다.
+- 실제 동작 여부는 `test:system-e2e`가 더 신뢰할 수 있는 기준이며, 최신 확인 기준으로는 통과했다.
 
 ## 4. 장애 분류 기준
 

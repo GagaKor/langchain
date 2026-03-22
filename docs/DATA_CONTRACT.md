@@ -11,8 +11,8 @@
 - 에러 응답 포맷
 - 내부적으로 생성되는 주요 메타데이터 계약
 
-현재 프로젝트는 단일 NestJS RAG API 서버이며, 공개 API 엔드포인트는 `/ingest/text`, `/ingest/files`, `/query`, `/health` 다.  
-근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/query/query.controller.ts](../src/rag/query/query.controller.ts), [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts)
+현재 프로젝트는 단일 NestJS RAG API 서버이며, 공개 API 엔드포인트는 `/ingest/text`, `/ingest/files`, `/query`, `/health` 다. 별도로 브라우저 기반 수동 테스트 UI는 `/playground` 에서 제공된다.  
+근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/query/query.controller.ts](../src/rag/query/query.controller.ts), [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts), [src/playground/playground.controller.ts](../src/playground/playground.controller.ts)
 
 ## 2. 공통 규약
 
@@ -23,6 +23,9 @@
 
 - Swagger 문서는 `/docs` 에서 제공된다.  
   근거: [src/main.ts](../src/main.ts)
+
+- 테스트용 브라우저 UI는 `/playground` 에서 제공된다.  
+  근거: [src/playground/playground.controller.ts](../src/playground/playground.controller.ts)
 
 - 전역 검증은 `ValidationPipe` 로 수행된다.  
   근거: [src/main.ts](../src/main.ts)
@@ -59,8 +62,9 @@
 | `POST` | `/ingest/files` | 파일 업로드 인덱싱 | multipart/form-data |
 | `POST` | `/query` | 검색 기반 질의 응답 | JSON |
 | `GET` | `/health` | Chroma/Ollama 상태 확인 | 없음 |
+| `GET` | `/playground` | 브라우저 기반 수동 테스트 UI | 없음 |
 
-근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/query/query.controller.ts](../src/rag/query/query.controller.ts), [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts)
+근거: [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/query/query.controller.ts](../src/rag/query/query.controller.ts), [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts), [src/playground/playground.controller.ts](../src/playground/playground.controller.ts)
 
 ## 4. Request Contract
 
@@ -230,6 +234,17 @@ curl -X POST http://localhost:3000/ingest/files \
 - path parameter 없음
 
 근거: [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts)
+
+### 4-5. `GET /playground`
+
+### 요청 규격
+
+- body 없음
+- query parameter 없음
+- path parameter 없음
+- 브라우저에서 접근하는 HTML 응답
+
+근거: [src/playground/playground.controller.ts](../src/playground/playground.controller.ts)
 
 ## 5. Response Contract
 

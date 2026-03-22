@@ -14,8 +14,8 @@
 - 구조 탐색의 핵심 축은 `src/`, `test/`, `data/`, 그리고 루트 실행/배포 파일들(`docker-compose.yml`, `Dockerfile`, `.env.example`)이다.  
   근거: [README.md](../README.md), [docker-compose.yml](../docker-compose.yml), [Dockerfile](../Dockerfile), [.env.example](../.env.example)
 
-- `src/` 아래는 전역 앱 설정을 담당하는 루트 계층과, 실제 RAG 기능을 모아둔 `src/rag`, 공통 예외 필터를 둔 `src/common`으로 나뉜다.  
-  근거: [src/app.module.ts](../src/app.module.ts), [src/common/filters/http-exception.filter.ts](../src/common/filters/http-exception.filter.ts), [src/rag/rag.module.ts](../src/rag/rag.module.ts)
+- `src/` 아래는 전역 앱 설정을 담당하는 루트 계층과, 실제 RAG 기능을 모아둔 `src/rag`, 공통 예외 필터를 둔 `src/common`, 테스트용 내장 UI를 제공하는 `src/playground`로 나뉜다.  
+  근거: [src/app.module.ts](../src/app.module.ts), [src/common/filters/http-exception.filter.ts](../src/common/filters/http-exception.filter.ts), [src/rag/rag.module.ts](../src/rag/rag.module.ts), [src/playground/playground.controller.ts](../src/playground/playground.controller.ts)
 
 - `data/` 아래에는 샘플 문서와 업로드 저장 디렉토리가 존재하며, 업로드 API는 실제로 `data/uploads`를 사용한다.  
   근거: [README.md](../README.md), [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts)
@@ -40,6 +40,9 @@
 
 - 애플리케이션 코드 기준 서비스 축은 하나의 NestJS API 서버다. 주요 HTTP 기능은 `health`, `ingest`, `query` 세 도메인으로 나뉜다.  
   근거: [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts), [src/rag/ingest/ingest.controller.ts](../src/rag/ingest/ingest.controller.ts), [src/rag/query/query.controller.ts](../src/rag/query/query.controller.ts)
+
+- 별도로 `/playground` 에서는 테스트와 수동 검증을 위한 브라우저 UI를 제공한다.  
+  근거: [src/playground/playground.controller.ts](../src/playground/playground.controller.ts), [src/playground/playground.page.ts](../src/playground/playground.page.ts)
 
 - 런타임 인프라 기준으로는 `chroma`, `ollama`, 선택적 `api` 컨테이너가 함께 정의되어 있다.  
   근거: [docker-compose.yml](../docker-compose.yml)
@@ -125,8 +128,8 @@
 - 애플리케이션 부팅 진입점은 `src/main.ts`이며, 여기서 ValidationPipe, 전역 예외 필터, Swagger 문서를 설정한다.  
   근거: [src/main.ts](../src/main.ts)
 
-- 최상위 모듈 진입점은 `src/app.module.ts`이고, 전역 `ConfigModule`과 `RagModule`을 로드한다.  
-  근거: [src/app.module.ts](../src/app.module.ts)
+- 최상위 모듈 진입점은 `src/app.module.ts`이고, 전역 `ConfigModule`, `RagModule`, `PlaygroundModule`을 로드한다.  
+  근거: [src/app.module.ts](../src/app.module.ts), [src/playground/playground.module.ts](../src/playground/playground.module.ts)
 
 - 실제 기능 진입은 `src/rag/rag.module.ts`에서 시작하며, `VectorStoreModule`, `LlmModule`, `IngestModule`, `QueryModule`, `HealthModule`을 조합한다.  
   근거: [src/rag/rag.module.ts](../src/rag/rag.module.ts)
@@ -139,6 +142,9 @@
 
 - 상태 확인 축은 `src/rag/health/health.controller.ts` -> `src/rag/health/health.service.ts` -> `src/rag/chroma/chroma.service.ts` / `src/rag/llm/ollama.service.ts` 순이다.  
   근거: [src/rag/health/health.controller.ts](../src/rag/health/health.controller.ts), [src/rag/health/health.service.ts](../src/rag/health/health.service.ts), [src/rag/chroma/chroma.service.ts](../src/rag/chroma/chroma.service.ts), [src/rag/llm/ollama.service.ts](../src/rag/llm/ollama.service.ts)
+
+- 수동 검증 UI 축은 `src/playground/playground.controller.ts` -> `src/playground/playground.page.ts` 순으로 읽으면 된다.  
+  근거: [src/playground/playground.controller.ts](../src/playground/playground.controller.ts), [src/playground/playground.page.ts](../src/playground/playground.page.ts)
 
 ### 추정 내용
 
@@ -187,6 +193,7 @@
 - 파일 업로드 결과는 `data/uploads`에 저장되고, 텍스트 추출 뒤 청킹 후 Chroma에 적재된다.
 - 질의 시 Chroma 검색 결과를 근거로 Ollama가 한국어 응답을 생성한다.
 - Swagger 문서는 `/docs`, 헬스체크는 `/health`, 인덱싱은 `/ingest/text`, `/ingest/files`, 질의는 `/query`에 노출된다.
+- 테스트용 브라우저 UI는 `/playground` 에 노출된다.
 - 전역 요청 검증과 예외 포맷 통일은 `src/main.ts`와 `src/common/filters/http-exception.filter.ts`에서 처리된다.
 
 ### 아직 확인이 필요한 질문

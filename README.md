@@ -57,6 +57,15 @@ docker run --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 ## API
 
 Swagger: `http://localhost:3000/docs`
+Playground UI: `http://localhost:3000/playground`
+
+테스트를 빠르게 해보고 싶으면 `/playground` 에서 아래를 한 화면에서 확인할 수 있습니다.
+
+- `GET /health`
+- `POST /ingest/text`
+- `POST /ingest/files`
+- `GET /ingest/jobs/:jobId`
+- `POST /query`
 
 ### 1) 텍스트 직접 인덱싱
 
