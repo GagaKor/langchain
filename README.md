@@ -39,7 +39,7 @@ npm run test:system-e2e
 - `OLLAMA_EMBED_MODEL` (기본 `nomic-embed-text`)
 - `OCR_LANGUAGE` (기본 `eng`)
 - `COLLECTION_NAME` (기본 `mvp_docs`)
-- `PORT` (기본 `3000`)
+- `PORT` (기본 `3300`)
 
 ## WSL2 + GPU 확인
 
@@ -56,8 +56,8 @@ docker run --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
 
 ## API
 
-Swagger: `http://localhost:3000/docs`
-Playground UI: `http://localhost:3000/playground`
+Swagger: `http://localhost:3300/docs`
+Playground UI: `http://localhost:3300/playground`
 
 테스트를 빠르게 해보고 싶으면 `/playground` 에서 아래를 한 화면에서 확인할 수 있습니다.
 
@@ -72,7 +72,7 @@ Playground UI: `http://localhost:3000/playground`
 `POST /ingest/text`
 
 ```bash
-curl -X POST http://localhost:3000/ingest/text \
+curl -X POST http://localhost:3300/ingest/text \
   -H "Content-Type: application/json" \
   -d '{
     "text":"내부 기획 문서 초안: 목표는 RAG 기반 근거 응답 제공",
@@ -85,7 +85,7 @@ curl -X POST http://localhost:3000/ingest/text \
 `POST /ingest/files` (multipart/form-data, 다중 파일, 비동기 job 생성)
 
 ```bash
-curl -X POST http://localhost:3000/ingest/files \
+curl -X POST http://localhost:3300/ingest/files \
   -F "project=internal-mvp" \
   -F "docType=planning" \
   -F "ocrMode=off" \
@@ -110,7 +110,7 @@ curl -X POST http://localhost:3000/ingest/files \
 `GET /ingest/jobs/:jobId`
 
 ```bash
-curl http://localhost:3000/ingest/jobs/a-job-id
+curl http://localhost:3300/ingest/jobs/a-job-id
 ```
 
 ### 4) 질의
@@ -118,7 +118,7 @@ curl http://localhost:3000/ingest/jobs/a-job-id
 `POST /query`
 
 ```bash
-curl -X POST http://localhost:3000/query \
+curl -X POST http://localhost:3300/query \
   -H "Content-Type: application/json" \
   -d '{
     "question":"이 MVP의 핵심 범위를 요약해줘",
@@ -134,7 +134,7 @@ curl -X POST http://localhost:3000/query \
 `GET /health` (Chroma/Ollama 연결 확인 포함)
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3300/health
 ```
 
 ## 시스템 e2e 완료 기준
@@ -235,7 +235,7 @@ OCR fallback 은 `tesseract`, `pdftoppm` 이 둘 다 설치된 환경에서만 �
 - OCR fallback 미동작
   - `tesseract`, `pdftoppm` 가 모두 설치되어 있는지 확인
   - `ocrMode=auto` 로 요청했는지 확인
-- 포트 충돌 (`8000` 또는 `3000`)
+- 포트 충돌 (`8000`, `11434`, 또는 `3300`)
   - 사용 중 프로세스를 종료하거나 포트를 변경
 - Chroma 연결 실패
   - `docker-compose ps`로 컨테이너 상태 확인

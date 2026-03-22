@@ -227,7 +227,7 @@
 - `API -> Ollama` 는 embeddings 생성, chat model 호출, heartbeat 에 사용된다.  
   근거: [src/rag/llm/ollama.service.ts](../src/rag/llm/ollama.service.ts), [src/rag/chroma/chroma.service.ts](../src/rag/chroma/chroma.service.ts)
 
-- 컨테이너 구성 기준 외부 서버 포트는 `Chroma: 8000`, `Ollama: 11434`, `API: 3000` 이다.  
+- 컨테이너 구성 기준 외부 서버 포트는 `Chroma: 8000`, `Ollama: 11434`, `API: 3300` 이다.  
   근거: [docker-compose.yml](../docker-compose.yml)
 
 ### 텍스트 그래프

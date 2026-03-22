@@ -98,7 +98,7 @@
 - Ollama 연결 코드는 `src/rag/llm/ollama.service.ts`에 있으며, 채팅 모델과 임베딩 모델 생성 및 heartbeat를 담당한다.  
   근거: [src/rag/llm/ollama.service.ts](../src/rag/llm/ollama.service.ts)
 
-- 외부 인프라 정의는 루트 `docker-compose.yml`에 집중되어 있고, Chroma는 `8000`, Ollama는 `11434`, API는 `3000` 포트를 사용한다.  
+- 외부 인프라 정의는 루트 `docker-compose.yml`에 집중되어 있고, Chroma는 `8000`, Ollama는 `11434`, API는 `3300` 포트를 사용한다.  
   근거: [docker-compose.yml](../docker-compose.yml)
 
 - 환경변수 기반 연결 설정은 `.env.example`과 `src/rag/shared/constants.ts`에 반영되어 있다.  
@@ -192,7 +192,7 @@
 - 외부 의존 인프라는 Chroma 벡터 저장소와 Ollama 모델 서버다.
 - 파일 업로드 결과는 `data/uploads`에 저장되고, 텍스트 추출 뒤 청킹 후 Chroma에 적재된다.
 - 질의 시 Chroma 검색 결과를 근거로 Ollama가 한국어 응답을 생성한다.
-- Swagger 문서는 `/docs`, 헬스체크는 `/health`, 인덱싱은 `/ingest/text`, `/ingest/files`, 질의는 `/query`에 노출된다.
+- Swagger 문서는 `/docs`, 헬스체크는 `/health`, 인덱싱은 `/ingest/text`, `/ingest/files`, 질의는 `/query`에 노출되며 기본 포트는 `3300`이다.
 - 테스트용 브라우저 UI는 `/playground` 에 노출된다.
 - 전역 요청 검증과 예외 포맷 통일은 `src/main.ts`와 `src/common/filters/http-exception.filter.ts`에서 처리된다.
 

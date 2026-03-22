@@ -9,6 +9,6 @@ COPY . .
 
 ENV NODE_ENV=development
 
-EXPOSE 3000
+EXPOSE 3300
 
 CMD ["npm", "run", "start:dev"]
