@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   UploadedFiles,
   UseInterceptors,
@@ -11,10 +13,11 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { extname } from 'node:path';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { IngestedFileResult, IngestService } from './services/ingest.service';
+import { IngestService } from './services/ingest.service';
 import { IngestTextDto } from './dto/ingest-text.dto';
 import { IngestFilesDto } from './dto/ingest-files.dto';
 import { ChromaService } from '../chroma/chroma.service';
+import { IngestJobService } from './services/ingest-job.service';
 
 interface UploadedFile {
   originalname: string;
@@ -26,6 +29,7 @@ interface UploadedFile {
 export class IngestController {
   constructor(
     private readonly ingestService: IngestService,
+    private readonly ingestJobService: IngestJobService,
     private readonly chromaService: ChromaService,
   ) {}
 
@@ -54,6 +58,7 @@ export class IngestController {
         project: { type: 'string' },
         docType: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' },
+        ocrMode: { type: 'string', enum: ['off', 'auto'] },
       },
     },
   })
@@ -82,32 +87,17 @@ export class IngestController {
       throw new BadRequestException('At least one file is required');
     }
 
-    const fileResults: IngestedFileResult[] = [];
+    return this.ingestJobService.queueFiles({
+      files,
+      project: body.project,
+      docType: body.docType,
+      createdAt: body.createdAt,
+      ocrMode: body.ocrMode,
+    });
+  }
 
-    for (const file of files ?? []) {
-      try {
-        const result = await this.ingestService.ingestFile({
-          file,
-          project: body.project,
-          docType: body.docType,
-          createdAt: body.createdAt,
-        });
-        fileResults.push(result);
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : 'Unexpected ingest failure';
-        fileResults.push({
-          filename: file.originalname,
-          docId: 'n/a',
-          ingested: 0,
-          status: 'failed' as const,
-          reason,
-        });
-      }
-    }
-
-    return {
-      files: fileResults,
-      collection: this.chromaService.getCollectionName(),
-    };
+  @Get('jobs/:jobId')
+  getIngestJob(@Param('jobId') jobId: string) {
+    return this.ingestJobService.getJob(jobId);
   }
 }

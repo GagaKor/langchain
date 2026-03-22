@@ -17,7 +17,7 @@ services:
       retries: 5
       start_period: 10s
   ollama:
-    image: ollama/ollama:0.1.47
+    image: ollama/ollama:0.13.3
     container_name: rag-ollama
     ports:
       - '11434:11434'
