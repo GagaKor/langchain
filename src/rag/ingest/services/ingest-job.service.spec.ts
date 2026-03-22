@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { IngestJobService } from './ingest-job.service';
 import { IngestService } from './ingest.service';
 import { ChromaService } from '../../chroma/chroma.service';
@@ -66,5 +67,39 @@ describe('IngestJobService', () => {
         ],
       }),
     );
+  });
+
+  it('marks the job as failed when ingest throws', async () => {
+    jest.spyOn(ingestService, 'ingestFile').mockRejectedValue(new Error('boom'));
+
+    const job = service.queueFiles({
+      files: [{ originalname: 'broken.txt', path: '/tmp/broken.txt' }],
+      ocrMode: 'off',
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(service.getJob(job.jobId)).toEqual(
+      expect.objectContaining({
+        status: 'failed',
+        summary: {
+          total: 1,
+          succeeded: 0,
+          failed: 1,
+        },
+        files: [
+          expect.objectContaining({
+            filename: 'broken.txt',
+            status: 'failed',
+            docId: 'n/a',
+            reason: 'boom',
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('throws when requesting an unknown job', () => {
+    expect(() => service.getJob('missing-job')).toThrow(NotFoundException);
   });
 });
