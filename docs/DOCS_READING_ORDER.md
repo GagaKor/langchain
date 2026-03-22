@@ -137,6 +137,9 @@
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
   - 테스트 결과 기반 장애 분석, 해결, 재발 방지 기록용
 
+- [TEST_REPORT_TEMPLATES.md](./TEST_REPORT_TEMPLATES.md)
+  - 유닛테스트, E2E, 결과검증 보고 형식 템플릿
+
 - [SERVICE_DEPENDENCY.md](./SERVICE_DEPENDENCY.md)
   - 현재 저장소 직접 근거보다는 외부 모노레포 가정 기반 서비스 의존 관계 정리
   - 현재 프로젝트를 바로 개발할 때의 우선 문서는 아니다
@@ -166,3 +169,4 @@
 - API 작업이면: [DATA_CONTRACT.md](./DATA_CONTRACT.md)
 - 코드 추가면: [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)
 - 장애 대응이면: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+- 테스트 보고 형식 확인이면: [TEST_REPORT_TEMPLATES.md](./TEST_REPORT_TEMPLATES.md)

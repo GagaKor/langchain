@@ -58,6 +58,48 @@ describe('QueryService', () => {
 
     expect(result.answer).toBe('답변');
     expect(result.citations).toHaveLength(1);
+    expect(result.retrieved).toEqual([
+      expect.objectContaining({
+        source: 'sample',
+        score: 0.1,
+        excerpt: '테스트 문서 내용',
+      }),
+    ]);
     expect(invoke).toHaveBeenCalled();
+  });
+
+  it('uses default topK and forwards filters to chroma', async () => {
+    jest.spyOn(chromaService, 'similaritySearchWithScore').mockResolvedValue([]);
+
+    await service.query({ question: '질문', filters: { project: 'mvp' } });
+
+    expect(chromaService.similaritySearchWithScore).toHaveBeenCalledWith('질문', 6, {
+      project: 'mvp',
+    });
+  });
+
+  it('truncates long excerpts and stringifies structured llm responses', async () => {
+    const longText = 'a'.repeat(320);
+    const doc = new Document({
+      pageContent: longText,
+      metadata: { source: 'long.txt', pageOrSlide: '1', chunkId: 10 },
+    });
+    jest.spyOn(chromaService, 'similaritySearchWithScore').mockResolvedValue([[doc, 0.42]]);
+
+    const invoke = jest.fn().mockResolvedValue({ content: [{ type: 'text', text: '답변' }] });
+    jest.spyOn(ollamaService, 'getChatModel').mockReturnValue({ invoke } as never);
+
+    const result = await service.query({ question: '긴 질문', topK: 2 });
+
+    expect(result.answer).toBe(JSON.stringify([{ type: 'text', text: '답변' }]));
+    expect(result.citations).toEqual([
+      {
+        source: 'long.txt',
+        docId: undefined,
+        pageOrSlide: undefined,
+        chunkId: undefined,
+        excerpt: `${'a'.repeat(300)}...`,
+      },
+    ]);
   });
 });
